@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -17,8 +17,69 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { extractInvoiceData } from "@/ai/flows/extract-invoice-data";
 
 export default function Home() {
+  const [open, setOpen] = React.useState(false);
+  const [documentDataUri, setDocumentDataUri] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      console.error("No file selected");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setDocumentDataUri(base64String);
+    };
+    reader.onerror = (error) => {
+      console.error("Error reading file:", error);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleExtractData = async () => {
+    if (!documentDataUri) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No document uploaded.",
+      });
+      return;
+    }
+
+    try {
+      const data = await extractInvoiceData({ documentDataUri });
+      toast({
+        title: "Success",
+        description: "Invoice data extracted successfully!",
+      });
+      console.log("Extracted data:", data);
+    } catch (error: any) {
+      console.error("Error extracting data:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to extract invoice data. ${error.message}`,
+      });
+    }
+  };
+
   return (
     <SidebarProvider>
       <div className="md:pl-64">
@@ -51,12 +112,34 @@ export default function Home() {
         <div className="flex-1">
           <div className="p-4">
             <div className="mb-4 flex justify-end">
-              <SidebarTrigger asChild>
-                <Button variant="outline">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Invoice
-                </Button>
-              </SidebarTrigger>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Invoice
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Add Invoice</DialogTitle>
+                    <DialogDescription>
+                      Upload your invoice document to extract data.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="file">Document</Label>
+                      <Input
+                        type="file"
+                        id="file"
+                        className="col-span-3"
+                        onChange={handleFileChange}
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={handleExtractData}>Extract Data</Button>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <Card>
@@ -75,3 +158,4 @@ export default function Home() {
     </SidebarProvider>
   );
 }
+
