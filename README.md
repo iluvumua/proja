@@ -1,6 +1,6 @@
-# Firebase Studio
+# Invoice Project
 
-This is a NextJS starter in Firebase Studio.
+This is a an invoice starter project
 
 To get started, take a look at src/app/page.tsx.
 # proja
